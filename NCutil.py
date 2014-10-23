@@ -70,8 +70,8 @@ def list_clients():
 	#------------------------
 	c.execute("select * from app_info")
 	for row in c.fetchall():
-		#print row[1]
-		print row
+		print row[1]
+		#print row
 		
 	
 		
