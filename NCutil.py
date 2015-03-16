@@ -13,12 +13,23 @@ from glob import glob
 
 ##############################
 ######## VARIABLES ###########
-# Store OS X version in format of 10.x
+# Store OS X version in format of 10.x.x
 v, _, _ = mac_ver()
-v = float('.'.join(v.split('.')[:2]))
+#Parse Out Major Version, mac_ver() can produce 10.10.2, 10.9.5, 10.8..
+osx_major = v.split('.')[0] + "." + v.split('.')[1]
+#Current User
 username = getuser()
-nc_db_path = '/Users/' + username + '/Library/Application Support/NotificationCenter/'
-nc_db = glob(nc_db_path + '*.db')
+
+if (osx_major == '10.8') or (osx_major == '10.9'):
+    nc_db_path = '/Users/' + username + '/Library/Application Support/NotificationCenter/'
+    nc_db = glob(nc_db_path + '*.db')
+# Support for osx 10.10 added via randomly generated id for Notification Center Database
+elif (osx_major == '10.10'):
+    dawrin_user_dir = os.popen('getconf DARWIN_USER_DIR').read().rstrip()
+    nc_db_path = dawrin_user_dir + 'com.apple.notificationcenter/db/'
+    nc_db = glob(nc_db_path + 'db')
+
+#Connect To SQLLite
 conn = sqlite3.connect(nc_db[0])
 conn.text_factory = str
 c = conn.cursor()
@@ -35,9 +46,9 @@ def usage(e=None):
     print " |_|\_|\___\_,_|\__|_|_|"
     print "                                     "
     print "Copyright 2014. Jacob Salmela.  http://jacobsalmela.com"
-    print "                                     "
+    print "Modified + OSX 10.10 Yosemite Support,  Jason Johnson (2015)"
+    print "                                              "
     print "USAGE:--------------------"
-    print "                                     "
     print "	%s -h [--help]" % (name,)
     #print "	%s -v [--verbose]" % (name,)
     print "	%s -l [--list]" % (name,)
