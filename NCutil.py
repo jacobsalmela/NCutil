@@ -25,8 +25,8 @@ if (osx_major == '10.8') or (osx_major == '10.9'):
     nc_db = glob(nc_db_path + '*.db')
 # Support for osx 10.10 added via randomly generated id for Notification Center Database
 elif (osx_major == '10.10'):
-    dawrin_user_dir = os.popen('getconf DARWIN_USER_DIR').read().rstrip()
-    nc_db_path = dawrin_user_dir + 'com.apple.notificationcenter/db/'
+    darwin_user_dir = os.popen('getconf DARWIN_USER_DIR').read().rstrip()
+    nc_db_path = darwin_user_dir + 'com.apple.notificationcenter/db/'
     nc_db = glob(nc_db_path + 'db')
 
 #Connect To SQLLite
