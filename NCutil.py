@@ -7,6 +7,7 @@ import getopt
 import os
 import pwd
 import grp
+import subprocess
 from platform import mac_ver
 from getpass import getuser
 from glob import glob
@@ -54,18 +55,21 @@ def usage(e=None):
     print "	%s -l [--list]" % (name,)
     print "	%s -i [--insert] <bundle id>" % (name,)
     print "	%s -r [--remove] <bundle id>" % (name,)
-    print "	%s -a [--alertstyle] <bundle id> banners|alerts " % (name,)
+    print "	%s -rsc [--remove-system-center] " % (name,)
+    print "	%s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
     print ""
 
-	
+def kill_notification_center():
+    subprocess.call("killall NotificationCenter", shell=True)
+    subprocess.call("killall usernoted", shell=True)
+
+
 def commit_changes():
-	#------------------------
-	# Apply the changes and close the sqlite connection
-	conn.commit()
-	conn.close()
-	#os.chown(nc_db, uid, gid)
-
-
+    #------------------------
+    # Apply the changes and close the sqlite connection
+    conn.commit()
+    conn.close()
+    kill_notification_center()
 
 def verboseOutput(*args):
 	#------------------------
@@ -116,86 +120,86 @@ def remove_app(bundle_id):
 	
 	
 
-def set_alert_style(alert_style, bundle_id):
+def set_alert_style(alert_style, bundle_id, like=False):
 	#------------------------
-	c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
-	commit_changes()
-	
-
+    if like:
+        c.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
+    else:
+	    c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
+    commit_changes()
 
 def get_alert_style(alert_style, bundle_id):
 	#------------------------
-	c.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
-	commit_changes()
-	
+    c.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
+    commit_changes()
 
+def remove_system_center():
+    if osx_major == "10.10":
+        set_alert_style("12609", "_SYSTEM_CENTER_%", True)
 
 def set_alert(bundle_id, style):
 	#------------------------
-	if style == "banners":
-		if (bundle_id == "com.apple.iCal") or (bundle_id == "com.apple.reminders"):
-			set_alert_style('8302', bundle_id)
-		elif (bundle_id == "com.apple.FaceTime") or (bundle_id == "com.apple.gamecenter") or (bundle_id == "com.apple.Safari"):
-			set_alert_style("8270", bundle_id)
-		elif (bundle_id == "com.apple.mail") or (bundle_id == "com.apple.iChat"):
-			set_alert_style("78", bundle_id)
-		else:
-			set_alert_style("8270", bundle_id)
-	elif style == "alerts":
-		if (bundle_id == "com.apple.iCal") or (bundle_id == "com.apple.reminders"):
-			set_alert_style('8310', bundle_id)
-		elif (bundle_id == "com.apple.FaceTime") or (bundle_id == "com.apple.gamecenter") or (bundle_id == "com.apple.Safari"):
-			set_alert_style("8278", bundle_id)
-		elif (bundle_id == "com.apple.mail") or (bundle_id == "com.apple.iChat"):
-			set_alert_style("86", bundle_id)
-		else:
-			set_alert_style("8270", bundle_id)
-	else:
-		print "Not a valid alert type"
 
-	
+    if not (style == "none") and (style == "alert") and (style == "banner"):
+        print "Not a valid alert type"
+        exit(1)
 
-#------------------------
-#------------------------
-#------------------------
+    #Build Bundle Types
+    bundles = {}
+    bundles['com.apple.mail'] = {'10.10': {'alert': 342, 'banner': 334, 'none': 20801}, '10.9': {'alert': 86, 'banner': 78}}
+    bundles['com.apple.iCal'] = {'10.10': {'alert': 8566, 'banner': 8558, 'none': 12641}, '10.9': {'alert': 8310, 'banner': 8302}}
+    bundles['com.apple.iChat'] = {'10.10': {'alert': 86, 'banner': 78, 'none': 20801}, '10.9': {'alert': 10443, 'banner': 78}}
+    bundles['default'] = {'10.10': {'alert': 8534, 'banner': 8526, 'none': 12609}, '10.9': {'alert': 86, 'banner': 1239}}
+
+    if osx_major == "10.10":
+        if bundle_id in bundles:
+            set_alert_style(bundles[bundle_id][osx_major][style], bundle_id)
+        else:
+            set_alert_style(bundles['default'][osx_major][style], bundle_id)
+    else:
+        if style == "none":
+            print "10.9 & 10.8 style None is not currently supported"
+        else:
+            if bundle_id in bundles:
+                set_alert_style(bundles[bundle_id][osx_major][style], bundle_id)
+            else:
+                set_alert_style(bundles['default'][osx_major][style], bundle_id)
+
 def main():
-	#------------------------
-	#------------------------
-	#------------------------
-	try:
-		# First arguments are UNIX-style, single-letter arguments
-		# Second list are long options.  Those requiring arguments are followed by an =
+    # ------------------------
+    #------------------------
+    #------------------------
+    try:
+        # First arguments are UNIX-style, single-letter arguments
+        # Second list are long options.  Those requiring arguments are followed by an =
+        opts, args = getopt.getopt(sys.argv[1::], "hlvi:r:a:s",
+                                   ["help", "list", "verbose", "remove-system-center", "insert=", "remove=", "alertstyle="])
+    except getopt.GetoptError as err:
+        usage()
+        sys.exit(2)
+    verbose = False
 
-		
-		opts, args = getopt.getopt(sys.argv[1::], "hlvi:r:a:", ["help", "list", "verbose", "insert=", "remove=", "alertstyle="])
-	except getopt.GetoptError as err:
-		usage()
-		sys.exit(2)
-	verbose = False
-	
-	# Parse arguments for options
-	for o, a in opts:
-		if o in ("-h", "--help"):
-			usage()
-			sys.exit()
-		elif o in ("-l", "--list"):
-			list_clients()
-		elif o in ("-v", "--verbose"):
-			verbose = True
-			print "Verbose feature to be added at a later date."
-		elif o in ("-i", "--insert"):
-			insert_app(a)
-		elif o in ("-r", "--remove"):
-			remove_app(a)
-		elif o in ("-a", "--alertstyle"):
-			for arg in args:
-				set_alert(a, arg)
-		else:
-			assert False, "unhandled option"
-		
-		
-		
-
+    # Parse arguments for options
+    for o, a in opts:
+        if o in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif o in ("-l", "--list"):
+            list_clients()
+        elif o in ("-v", "--verbose"):
+            verbose = True
+            print "Verbose feature to be added at a later date."
+        elif o in ("-i", "--insert"):
+            insert_app(a)
+        elif o in ("-r", "--remove"):
+            remove_app(a)
+        elif o in ("-s", "--remove-system-center"):
+            remove_system_center()
+        elif o in ("-a", "--alertstyle"):
+            for arg in args:
+                set_alert(a, arg)
+        else:
+            assert False, "unhandled option"
 
 if __name__ == "__main__":
 	main()
