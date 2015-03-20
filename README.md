@@ -35,6 +35,6 @@ Apple has a lot of different apps that show notifications, which do not show up 
 
 - ```NCutil.py --alerts com.apple.maspushagent none```
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent none```
-- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.noticeboard none``
+- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.noticeboard none```
  
 You can also try removing them, but Apple seems to add them back in somehow when you reboot.
