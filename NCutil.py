@@ -55,7 +55,7 @@ def usage(e=None):
     print "	%s -l [--list]" % (name,)
     print "	%s -i [--insert] <bundle id>" % (name,)
     print "	%s -r [--remove] <bundle id>" % (name,)
-    print "	%s -rsc [--remove-system-center] " % (name,)
+    print "	%s -s [--remove-system-center] " % (name,)
     print "	%s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
     print ""
 
@@ -125,7 +125,7 @@ def set_alert_style(alert_style, bundle_id, like=False):
     if like:
         c.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
     else:
-	    c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
+	c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
     commit_changes()
 
 def get_alert_style(alert_style, bundle_id):
