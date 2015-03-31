@@ -12,32 +12,6 @@ from platform import mac_ver
 from getpass import getuser
 from glob import glob
 
-##############################
-######## VARIABLES ###########
-# Store OS X version in format of 10.x.x
-v, _, _ = mac_ver()
-#Parse Out Major Version, mac_ver() can produce 10.10.2, 10.9.5, 10.8..
-osx_major = v.split('.')[0] + "." + v.split('.')[1]
-#Current User
-username = getuser()
-
-if (osx_major == '10.8') or (osx_major == '10.9'):
-    nc_nb_path = os.path.expanduser(
-        '~/Library/Application Support/NotificationCenter/')
-    nc_db = glob(nc_nb_path + '*.db')
-# Support for osx 10.10 added via randomly generated id for Notification Center Database
-elif (osx_major == '10.10'):
-    darwin_user_dir = subprocess.check_output(
-        ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
-    nc_db_path = os.path.join(
-        darwin_user_dir, 'com.apple.notificationcenter/db/')
-    nc_db = glob(nc_db_path + 'db')
-
-#Connect To SQLLite
-conn = sqlite3.connect(nc_db[0])
-conn.text_factory = str
-c = conn.cursor()
-
 
 ##############################
 ######## FUNCTIONS ###########
@@ -62,17 +36,56 @@ def usage(e=None):
     print " %s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
     print ""
 
+
+def get_nc_db():
+    '''Returns a path to the current(?) NotificationCenter db'''
+    nc_db = None
+    # Store OS X version in format of 10.x.x
+    v, _, _ = mac_ver()
+    #Parse Out Major Version, mac_ver() can produce 10.10.2, 10.9.5, 10.8..
+    osx_major = v.split('.')[0] + "." + v.split('.')[1]
+
+    if (osx_major == '10.8') or (osx_major == '10.9'):
+        nc_nb_path = os.path.expanduser(
+            '~/Library/Application Support/NotificationCenter/')
+        nc_dbs = glob(nc_nb_path + '*.db')
+        if nc_dbs:
+            nc_dbs.sort(key=os.path.getmtime)
+            # most recently modified will be the last one
+            nc_db = nc_dbs[-1]
+    # Support for osx 10.10 added via randomly generated id for Notification Center Database
+    elif (osx_major == '10.10'):
+        darwin_user_dir = subprocess.check_output(
+            ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
+        nc_db = os.path.join(
+            darwin_user_dir, 'com.apple.notificationcenter/db/db')
+    return nc_db
+
+
+def connect_to_db():
+    conn = None
+    curs = None
+    #Connect To SQLLite
+    nc_db = get_nc_db()
+    if nc_db:
+        conn = sqlite3.connect(nc_db)
+        conn.text_factory = str
+        curs = conn.cursor()
+    return conn, curs
+
+
 def kill_notification_center():
     subprocess.call(['/usr/bin/killall', 'NotificationCenter'])
     subprocess.call(['/usr/bin/killall', 'usernoted'])
 
 
-def commit_changes():
+def commit_changes(conn):
     #------------------------
     # Apply the changes and close the sqlite connection
     conn.commit()
     conn.close()
     kill_notification_center()
+
 
 def verboseOutput(*args):
     #------------------------
@@ -81,21 +94,20 @@ def verboseOutput(*args):
             print "Verbose:", args
         except:
             pass
- 
-    
-    
+
+
 def list_clients():
     #------------------------
-    c.execute("select * from app_info")
-    for row in c.fetchall():
+    conn, curs = connect_to_db()
+    curs.execute("select * from app_info")
+    for row in curs.fetchall():
         print row[1]
-        #print row
-        
-    
-        
-def get_available_id():
+    conn.close()
+
+
+def get_available_id(curs):
     #------------------------
-    c.execute("select * from app_info")
+    curs.execute("select * from app_info")
     last_iteration = None
     for row in c.fetchall():
         if last_iteration is not None:
@@ -103,52 +115,50 @@ def get_available_id():
         last_iteration = 'no'
     last_id = row[0]
     return last_id + 1
-        
 
 
 def insert_app(bundle_id):
     #------------------------
-    last_id = get_available_id()
-    c.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (last_id, bundle_id, last_id))
-    commit_changes()
-    
-    
-    
+    conn, curs = connect_to_db()
+    last_id = get_available_id(curs)
+    curs.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (last_id, bundle_id, last_id))
+    commit_changes(conn)
+
+
 def remove_app(bundle_id):
     #------------------------
+    conn, curs = connect_to_db()
     if (bundle_id == 'com.apple.maspushagent') or (bundle_id == 'com.apple.appstore'):
         print "Yeah, those alerts are annoying."
-    c.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
-    commit_changes()
-    
-    
+    curs.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
+    commit_changes(conn)
+
 
 def set_alert_style(alert_style, bundle_id, like=False):
     #------------------------
+    conn, curs = connect_to_db()
     if like:
-        c.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
+        curs.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
     else:
-        c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
-        commit_changes()
+        curs.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
+        commit_changes(conn)
+
 
 def get_alert_style(alert_style, bundle_id):
     #------------------------
-    c.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
-    commit_changes()
+    conn, curs = connect_to_db()
+    curs.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
+    conn.close()
+
 
 def remove_system_center():
     if osx_major == "10.10":
         set_alert_style("12609", "_SYSTEM_CENTER_%", True)
 
+
 def set_alert(bundle_id, style):
     #------------------------
-
-    #if not (style == "none") and (style == "alert") and (style == "banner"):
-    # only true if (style == "alert") and (style == "banner") ! IOW, never true
-    # >>> style = 'foo'
-    # >>> not (style == "none") and (style == "alert") and (style == "banner")
-    # False
-    # so let's do this instead:
+    # verify this is a supported alert type
     if style not in ['none', 'alert', 'banner']:
         print "Not a valid alert type"
         exit(1)
@@ -173,6 +183,7 @@ def set_alert(bundle_id, style):
                 set_alert_style(bundles[bundle_id][osx_major][style], bundle_id)
             else:
                 set_alert_style(bundles['default'][osx_major][style], bundle_id)
+
 
 def main():
     # ------------------------
