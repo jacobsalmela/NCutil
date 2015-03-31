@@ -22,12 +22,15 @@ osx_major = v.split('.')[0] + "." + v.split('.')[1]
 username = getuser()
 
 if (osx_major == '10.8') or (osx_major == '10.9'):
-    nc_db_path = '/Users/' + username + '/Library/Application Support/NotificationCenter/'
+    nc_nb_path = os.path.expanduser(
+        '~/Library/Application Support/NotificationCenter/')
     nc_db = glob(nc_db_path + '*.db')
 # Support for osx 10.10 added via randomly generated id for Notification Center Database
 elif (osx_major == '10.10'):
-    darwin_user_dir = os.popen('getconf DARWIN_USER_DIR').read().rstrip()
-    nc_db_path = darwin_user_dir + 'com.apple.notificationcenter/db/'
+    darwin_user_dir = subprocess.check_output(
+        ['/usr/bin/getconf', 'DARWIN_USER_DIR']).read().rstrip()
+    nc_db_path = os.path.join(
+        darwin_user_dir, 'com.apple.notificationcenter/db/')
     nc_db = glob(nc_db_path + 'db')
 
 #Connect To SQLLite
@@ -60,8 +63,8 @@ def usage(e=None):
     print ""
 
 def kill_notification_center():
-    subprocess.call("killall NotificationCenter", shell=True)
-    subprocess.call("killall usernoted", shell=True)
+    subprocess.call(['/usr/bin/killall', 'NotificationCenter'])
+    subprocess.call(['/usr/bin/killall', 'usernoted'])
 
 
 def commit_changes():
