@@ -85,6 +85,8 @@ def commit_changes(conn):
     conn.commit()
     conn.close()
     kill_notification_center()
+    
+    
 
 
 def verboseOutput(*args):
@@ -158,17 +160,18 @@ def remove_system_center():
 
 def set_alert(bundle_id, style):
     #------------------------
+
     # verify this is a supported alert type
-    if style not in ['none', 'alert', 'banner']:
+    if style not in ['none', 'alerts', 'banners']:
         print "Not a valid alert type"
         exit(1)
 
     #Build Bundle Types
     bundles = {}
-    bundles['com.apple.mail'] = {'10.10': {'alert': 342, 'banner': 334, 'none': 20801}, '10.9': {'alert': 86, 'banner': 78}}
-    bundles['com.apple.iCal'] = {'10.10': {'alert': 8566, 'banner': 8558, 'none': 12641}, '10.9': {'alert': 8310, 'banner': 8302}}
-    bundles['com.apple.iChat'] = {'10.10': {'alert': 86, 'banner': 78, 'none': 20801}, '10.9': {'alert': 10443, 'banner': 78}}
-    bundles['default'] = {'10.10': {'alert': 8534, 'banner': 8526, 'none': 12609}, '10.9': {'alert': 86, 'banner': 1239}}
+    bundles['com.apple.mail'] = {'10.10': {'alerts': 342, 'banners': 334, 'none': 20801}, '10.9': {'alerts': 86, 'banners': 78}}
+    bundles['com.apple.iCal'] = {'10.10': {'alerts': 8566, 'banners': 8558, 'none': 12641}, '10.9': {'alerts': 8310, 'banners': 8302}}
+    bundles['com.apple.iChat'] = {'10.10': {'alerts': 86, 'banners': 78, 'none': 20801}, '10.9': {'alerts': 10443, 'banners': 78}}
+    bundles['default'] = {'10.10': {'alerts': 8534, 'banners': 8526, 'none': 12609}, '10.9': {'alerts': 86, 'banners': 1239}}
 
     if osx_major == "10.10":
         if bundle_id in bundles:
