@@ -28,7 +28,7 @@ if (osx_major == '10.8') or (osx_major == '10.9'):
 # Support for osx 10.10 added via randomly generated id for Notification Center Database
 elif (osx_major == '10.10'):
     darwin_user_dir = subprocess.check_output(
-        ['/usr/bin/getconf', 'DARWIN_USER_DIR']).read().rstrip()
+        ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
     nc_db_path = os.path.join(
         darwin_user_dir, 'com.apple.notificationcenter/db/')
     nc_db = glob(nc_db_path + 'db')
