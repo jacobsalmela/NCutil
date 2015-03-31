@@ -5,11 +5,8 @@ import sqlite3
 import sys
 import getopt
 import os
-import pwd
-import grp
 import subprocess
 from platform import mac_ver
-from getpass import getuser
 from glob import glob
 
 
@@ -37,13 +34,18 @@ def usage(e=None):
     print ""
 
 
+
+def get_osx_major():
+    v, _, _ = mac_ver()
+    #Parse Out Major Version, mac_ver() can produce 10.10.2, 10.9.5, 10.8..
+    return v.split('.')[0] + "." + v.split('.')[1]
+osx_major = get_osx_major()
+
+
 def get_nc_db():
     '''Returns a path to the current(?) NotificationCenter db'''
     nc_db = None
     # Store OS X version in format of 10.x.x
-    v, _, _ = mac_ver()
-    #Parse Out Major Version, mac_ver() can produce 10.10.2, 10.9.5, 10.8..
-    osx_major = v.split('.')[0] + "." + v.split('.')[1]
 
     if (osx_major == '10.8') or (osx_major == '10.9'):
         nc_nb_path = os.path.expanduser(
@@ -63,6 +65,8 @@ def get_nc_db():
 
 
 def connect_to_db():
+    '''Connect to the Notification Center db and return connection object
+    and cursor'''
     conn = None
     curs = None
     #Connect To SQLLite
@@ -75,6 +79,8 @@ def connect_to_db():
 
 
 def kill_notification_center():
+    '''Send a kill signal to NotificationCenter and usernoted; they will
+    relaunch'''
     subprocess.call(['/usr/bin/killall', 'NotificationCenter'])
     subprocess.call(['/usr/bin/killall', 'usernoted'])
 
@@ -85,8 +91,6 @@ def commit_changes(conn):
     conn.commit()
     conn.close()
     kill_notification_center()
-    
-    
 
 
 def verboseOutput(*args):
@@ -110,20 +114,16 @@ def list_clients():
 def get_available_id(curs):
     #------------------------
     curs.execute("select * from app_info")
-    last_iteration = None
-    for row in c.fetchall():
-        if last_iteration is not None:
-            pass
-        last_iteration = 'no'
-    last_id = row[0]
+    # return first field of last row
+    last_id = curs.fetchall()[-1][0]
     return last_id + 1
 
 
 def insert_app(bundle_id):
     #------------------------
     conn, curs = connect_to_db()
-    last_id = get_available_id(curs)
-    curs.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (last_id, bundle_id, last_id))
+    next_id = get_available_id(curs)
+    curs.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (next_id, bundle_id, next_id))
     commit_changes(conn)
 
 
@@ -155,12 +155,11 @@ def get_alert_style(alert_style, bundle_id):
 
 def remove_system_center():
     if osx_major == "10.10":
-        set_alert_style("12609", "_SYSTEM_CENTER_%", True)
+        set_alert_style("12609", "_SYSTEM_CENTER_%", like=True)
 
 
 def set_alert(bundle_id, style):
     #------------------------
-
     # verify this is a supported alert type
     if style not in ['none', 'alerts', 'banners']:
         print "Not a valid alert type"
@@ -189,7 +188,7 @@ def set_alert(bundle_id, style):
 
 
 def main():
-    # ------------------------
+    #------------------------
     #------------------------
     #------------------------
     try:
