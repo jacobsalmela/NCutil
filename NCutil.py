@@ -22,12 +22,15 @@ osx_major = v.split('.')[0] + "." + v.split('.')[1]
 username = getuser()
 
 if (osx_major == '10.8') or (osx_major == '10.9'):
-    nc_db_path = '/Users/' + username + '/Library/Application Support/NotificationCenter/'
-    nc_db = glob(nc_db_path + '*.db')
+    nc_nb_path = os.path.expanduser(
+        '~/Library/Application Support/NotificationCenter/')
+    nc_db = glob(nc_nb_path + '*.db')
 # Support for osx 10.10 added via randomly generated id for Notification Center Database
 elif (osx_major == '10.10'):
-    darwin_user_dir = os.popen('getconf DARWIN_USER_DIR').read().rstrip()
-    nc_db_path = darwin_user_dir + 'com.apple.notificationcenter/db/'
+    darwin_user_dir = subprocess.check_output(
+        ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
+    nc_db_path = os.path.join(
+        darwin_user_dir, 'com.apple.notificationcenter/db/')
     nc_db = glob(nc_db_path + 'db')
 
 #Connect To SQLLite
@@ -39,7 +42,7 @@ c = conn.cursor()
 ##############################
 ######## FUNCTIONS ###########
 def usage(e=None):
-	#------------------------
+    #------------------------
     name = os.path.basename(sys.argv[0])
     print "  _  _  ___     _   _ _ "
     print " | \| |/ __|  _| |_(_) |"
@@ -50,18 +53,18 @@ def usage(e=None):
     print "Modified + OSX 10.10 Yosemite Support,  Jason Johnson (2015)"
     print "                                              "
     print "USAGE:--------------------"
-    print "	%s -h [--help]" % (name,)
-    #print "	%s -v [--verbose]" % (name,)
-    print "	%s -l [--list]" % (name,)
-    print "	%s -i [--insert] <bundle id>" % (name,)
-    print "	%s -r [--remove] <bundle id>" % (name,)
-    print "	%s -s [--remove-system-center] " % (name,)
-    print "	%s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
+    print " %s -h [--help]" % (name,)
+    #print "    %s -v [--verbose]" % (name,)
+    print " %s -l [--list]" % (name,)
+    print " %s -i [--insert] <bundle id>" % (name,)
+    print " %s -r [--remove] <bundle id>" % (name,)
+    print " %s -s [--remove-system-center] " % (name,)
+    print " %s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
     print ""
 
 def kill_notification_center():
-    subprocess.call("killall NotificationCenter", shell=True)
-    subprocess.call("killall usernoted", shell=True)
+    subprocess.call(['/usr/bin/killall', 'NotificationCenter'])
+    subprocess.call(['/usr/bin/killall', 'usernoted'])
 
 
 def commit_changes():
@@ -72,64 +75,64 @@ def commit_changes():
     kill_notification_center()
 
 def verboseOutput(*args):
-	#------------------------
-	if verbose:
-		try:
-			print "Verbose:", args
-		except:
-			pass
+    #------------------------
+    if verbose:
+        try:
+            print "Verbose:", args
+        except:
+            pass
  
-	
-	
+    
+    
 def list_clients():
-	#------------------------
-	c.execute("select * from app_info")
-	for row in c.fetchall():
-		print row[1]
-		#print row
-		
-	
-		
+    #------------------------
+    c.execute("select * from app_info")
+    for row in c.fetchall():
+        print row[1]
+        #print row
+        
+    
+        
 def get_available_id():
-	#------------------------
-	c.execute("select * from app_info")
-	last_iteration = None
-	for row in c.fetchall():
-		if last_iteration is not None:
-			pass
-		last_iteration = 'no'
-	last_id = row[0]
-	return last_id + 1
-		
+    #------------------------
+    c.execute("select * from app_info")
+    last_iteration = None
+    for row in c.fetchall():
+        if last_iteration is not None:
+            pass
+        last_iteration = 'no'
+    last_id = row[0]
+    return last_id + 1
+        
 
 
 def insert_app(bundle_id):
-	#------------------------
-	last_id = get_available_id()
-	c.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (last_id, bundle_id, last_id))
-	commit_changes()
-	
-	
-	
+    #------------------------
+    last_id = get_available_id()
+    c.execute("INSERT or REPLACE INTO app_info VALUES('%s', '%s', '14', '5', '%s')" % (last_id, bundle_id, last_id))
+    commit_changes()
+    
+    
+    
 def remove_app(bundle_id):
-	#------------------------
-	if (bundle_id == 'com.apple.maspushagent') or (bundle_id == 'com.apple.appstore'):
-		print "Yeah, those alerts are annoying."
-	c.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
-	commit_changes()
-	
-	
+    #------------------------
+    if (bundle_id == 'com.apple.maspushagent') or (bundle_id == 'com.apple.appstore'):
+        print "Yeah, those alerts are annoying."
+    c.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
+    commit_changes()
+    
+    
 
 def set_alert_style(alert_style, bundle_id, like=False):
-	#------------------------
+    #------------------------
     if like:
         c.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
     else:
-	c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
-    commit_changes()
+        c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
+        commit_changes()
 
 def get_alert_style(alert_style, bundle_id):
-	#------------------------
+    #------------------------
     c.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
     commit_changes()
 
@@ -138,9 +141,15 @@ def remove_system_center():
         set_alert_style("12609", "_SYSTEM_CENTER_%", True)
 
 def set_alert(bundle_id, style):
-	#------------------------
+    #------------------------
 
-    if not (style == "none") and (style == "alert") and (style == "banner"):
+    #if not (style == "none") and (style == "alert") and (style == "banner"):
+    # only true if (style == "alert") and (style == "banner") ! IOW, never true
+    # >>> style = 'foo'
+    # >>> not (style == "none") and (style == "alert") and (style == "banner")
+    # False
+    # so let's do this instead:
+    if style not in ['none', 'alert', 'banner']:
         print "Not a valid alert type"
         exit(1)
 
@@ -202,4 +211,4 @@ def main():
             assert False, "unhandled option"
 
 if __name__ == "__main__":
-	main()
+    main()
