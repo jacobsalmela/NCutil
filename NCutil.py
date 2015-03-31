@@ -73,6 +73,8 @@ def commit_changes():
     conn.commit()
     conn.close()
     kill_notification_center()
+    
+    
 
 def verboseOutput(*args):
     #------------------------
@@ -131,14 +133,20 @@ def set_alert_style(alert_style, bundle_id, like=False):
         c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
         commit_changes()
 
+
+
 def get_alert_style(alert_style, bundle_id):
     #------------------------
     c.execute("SELECT flags from app_info where bundleid='%d'" % (alert_style))
     commit_changes()
 
+
+
 def remove_system_center():
     if osx_major == "10.10":
         set_alert_style("12609", "_SYSTEM_CENTER_%", True)
+
+
 
 def set_alert(bundle_id, style):
     #------------------------
@@ -149,16 +157,16 @@ def set_alert(bundle_id, style):
     # >>> not (style == "none") and (style == "alert") and (style == "banner")
     # False
     # so let's do this instead:
-    if style not in ['none', 'alert', 'banner']:
+    if style not in ['none', 'alerts', 'banners']:
         print "Not a valid alert type"
         exit(1)
 
     #Build Bundle Types
     bundles = {}
-    bundles['com.apple.mail'] = {'10.10': {'alert': 342, 'banner': 334, 'none': 20801}, '10.9': {'alert': 86, 'banner': 78}}
-    bundles['com.apple.iCal'] = {'10.10': {'alert': 8566, 'banner': 8558, 'none': 12641}, '10.9': {'alert': 8310, 'banner': 8302}}
-    bundles['com.apple.iChat'] = {'10.10': {'alert': 86, 'banner': 78, 'none': 20801}, '10.9': {'alert': 10443, 'banner': 78}}
-    bundles['default'] = {'10.10': {'alert': 8534, 'banner': 8526, 'none': 12609}, '10.9': {'alert': 86, 'banner': 1239}}
+    bundles['com.apple.mail'] = {'10.10': {'alerts': 342, 'banners': 334, 'none': 20801}, '10.9': {'alerts': 86, 'banners': 78}}
+    bundles['com.apple.iCal'] = {'10.10': {'alerts': 8566, 'banners': 8558, 'none': 12641}, '10.9': {'alerts': 8310, 'banners': 8302}}
+    bundles['com.apple.iChat'] = {'10.10': {'alerts': 86, 'banners': 78, 'none': 20801}, '10.9': {'alerts': 10443, 'banners': 78}}
+    bundles['default'] = {'10.10': {'alerts': 8534, 'banners': 8526, 'none': 12609}, '10.9': {'alerts': 86, 'banners': 1239}}
 
     if osx_major == "10.10":
         if bundle_id in bundles:
