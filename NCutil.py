@@ -24,7 +24,7 @@ username = getuser()
 if (osx_major == '10.8') or (osx_major == '10.9'):
     nc_nb_path = os.path.expanduser(
         '~/Library/Application Support/NotificationCenter/')
-    nc_db = glob(nc_db_path + '*.db')
+    nc_db = glob(nc_nb_path + '*.db')
 # Support for osx 10.10 added via randomly generated id for Notification Center Database
 elif (osx_major == '10.10'):
     darwin_user_dir = subprocess.check_output(
@@ -128,8 +128,8 @@ def set_alert_style(alert_style, bundle_id, like=False):
     if like:
         c.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'" % (alert_style, bundle_id))
     else:
-    c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
-    commit_changes()
+        c.execute("UPDATE app_info SET flags='%s' where bundleid='%s'" % (alert_style, bundle_id))
+        commit_changes()
 
 def get_alert_style(alert_style, bundle_id):
     #------------------------
@@ -143,7 +143,13 @@ def remove_system_center():
 def set_alert(bundle_id, style):
     #------------------------
 
-    if not (style == "none") and (style == "alert") and (style == "banner"):
+    #if not (style == "none") and (style == "alert") and (style == "banner"):
+    # only true if (style == "alert") and (style == "banner") ! IOW, never true
+    # >>> style = 'foo'
+    # >>> not (style == "none") and (style == "alert") and (style == "banner")
+    # False
+    # so let's do this instead:
+    if style not in ['none', 'alert', 'banner']:
         print "Not a valid alert type"
         exit(1)
 
