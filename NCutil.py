@@ -6,7 +6,6 @@ import sys
 import getopt
 import os
 import subprocess
-import sys
 from platform import mac_ver
 from glob import glob
 
@@ -47,7 +46,7 @@ def get_nc_db():
     '''Returns a path to the current (hopefully?) NotificationCenter db'''
     nc_db = None
     osx_major = get_osx_major()
-    if (osx_major == '10.8') or (osx_major == '10.9'):
+    if osx_major == '10.8' or osx_major == '10.9':
         nc_nb_path = os.path.expanduser(
             '~/Library/Application Support/NotificationCenter/')
         nc_dbs = glob(nc_nb_path + '*.db')
@@ -57,7 +56,7 @@ def get_nc_db():
             nc_db = nc_dbs[-1]
     # Support for osx 10.10 added via randomly generated id for
     # Notification Center Database
-    elif (osx_major == '10.10'):
+    elif osx_major == '10.10':
         darwin_user_dir = subprocess.check_output(
             ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
         nc_db = os.path.join(
@@ -138,8 +137,8 @@ def remove_app(bundle_id):
         exit(1)
 
     conn, curs = connect_to_db()
-    if (bundle_id == 'com.apple.maspushagent')
-            or (bundle_id == 'com.apple.appstore'):
+    if (bundle_id == 'com.apple.maspushagent'
+            or bundle_id == 'com.apple.appstore'):
         print "Yeah, those alerts are annoying."
     curs.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
     commit_changes(conn)
@@ -154,7 +153,7 @@ def set_flags(flags, bundle_id, like=False):
                      % (flags, bundle_id))
     else:
         curs.execute("UPDATE app_info SET flags='%s' where bundleid='%s'"
-                      % (flags, bundle_id))
+                     % (flags, bundle_id))
     commit_changes(conn)
 
 
@@ -210,9 +209,9 @@ UNKNOWN_8 = 1 << 8
 UNKNOWN_9 = 1 << 9
 UNKNOWN_10 = 1 << 10
 UNKNOWN_11 = 1 << 11
-SHOW_ON_LOCKSCREEN =  1 << 12
-SHOW_PREVIEWS_ALWAYS =  1 << 13
-SHOW_PREVIEWS_WHEN_UNLOCKED =  1 << 14
+SHOW_ON_LOCKSCREEN = 1 << 12
+SHOW_PREVIEWS_ALWAYS = 1 << 13
+SHOW_PREVIEWS_WHEN_UNLOCKED = 1 << 14
 UNKNOWN_15 = 1 << 15
 
 
@@ -226,7 +225,7 @@ def get_alertstyle(bundle_id):
     if current_flags & ALERT_STYLE:
         style = "alerts"
     elif current_flags & BANNER_STYLE:
-        style= "banners"
+        style = "banners"
     else:
         style = "none"
     print "%s has notification style: %s" % (bundle_id, style)
