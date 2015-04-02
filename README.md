@@ -24,17 +24,37 @@ Adding and removing apps is perfect for deploying software silently or having it
 - ```NCutil.py --remove com.apple.com.barebones.textwrangler```
 
 ## Adjust Alert Duration (Alerts or Banners)
-Yosemite also added the option for *None*.
 
-- ```NCutil.py -a com.apple.Safari alert```
-- ```NCutil.py -a com.apple.reminders banner```
+- ```NCutil.py -a com.apple.Safari alerts```
+- ```NCutil.py -a com.apple.reminders banners```
 - ```NCutil.py -a com.apple.appstore none```
 
+## Get Current Alert Setting
+You can find out what the app's current alert setting is with the `-g` flag.
+
+- ```NCutil.py -g com.teamviewer.TeamViewer```
+- ```NCutil.py --getalertstyle com.teamviewer.TeamViewer```
+
+which will return something like this:
+
+```com.teamviewer.TeamViewer has notification style: banners```
+
 ## Suppress Apple Update Notifications
-Apple has a lot of different apps that show notifications, which do not show up in the GUI.  Examples are battery notices, Bluetooth, updates, keychain, etc.  You can suppress these hidden notifications with a few simple commands:
+Apple has a lot of different apps that show notifications, which do not show up in the GUI.  Examples are battery notices, Bluetooth, updates, keychain, etc.  You can suppress these hidden notifications with a few simple commands.  I use the following to disable the App Store and Software Update notifications.
 
 - ```NCutil.py --alerts com.apple.maspushagent none```
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent none```
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.noticeboard none```
  
-You can also try removing them, but Apple seems to add them back in somehow when you reboot.
+You can remove **all** of these hidden Notification sources by using the `-s` or `-remove-system-center` options.  This is the equivalent to setting each one individually to an alert style of `none`.
+
+- ```NCutil.py -s```
+- ```NCutil.py -remove-system-center```
+
+If there were some sources you still wanted to have, you can simply re-enable them.
+
+- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent banners```
+- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.battery-monitor banners```
+
+Apple hides these from the GUI, so this utility kind of works around that, so you can modify them at your own risk.
+
