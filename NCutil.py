@@ -1,38 +1,26 @@
 #!/usr/bin/python
 ##############################
 ######### IMPORTS ############
-import sqlite3
 import sys
-import getopt
+import optparse
 import os
 import subprocess
+import sqlite3
+
 from platform import mac_ver
 from glob import glob
 
-
 ##############################
 ######## FUNCTIONS ###########
-def usage(e=None):
-    #------------------------
-    name = os.path.basename(sys.argv[0])
-    print "  _  _  ___     _   _ _ "
-    print " | \| |/ __|  _| |_(_) |"
-    print " | .` | (_| || |  _| | |"
-    print " |_|\_|\___\_,_|\__|_|_|"
-    print "                                     "
-    print "Copyright 2014. Jacob Salmela.  http://jacobsalmela.com"
-    print "Modified + OSX 10.10 Yosemite Support,  Jason Johnson (2015)"
-    print "                                              "
-    print "USAGE:--------------------"
-    print " %s -h [--help]" % (name,)
-    #print "    %s -v [--verbose]" % (name,)
-    print " %s -l [--list]" % (name,)
-    print " %s -i [--insert] <bundle id>" % (name,)
-    print " %s -r [--remove] <bundle id>" % (name,)
-    print " %s -s [--remove-system-center] " % (name,)
-    print " %s -g [--getalertstyle] <bundle id>" % (name,)
-    print " %s -a [--alertstyle] <bundle id> none|banners|alerts " % (name,)
-    print ""
+def usage():
+    return """
+  _  _  ___     _   _ _ 
+ | \| |/ __|  _| |_(_) |
+ | .` | (_| || |  _| | |
+ |_|\_|\___\_,_|\__|_|_|
+
+Copyright 2014. Jacob Salmela.  http://jacobsalmela.com
+Modified + OSX 10.10 Yosemite Support,  Jason Johnson (2015)"""
 
 
 def get_osx_major():
@@ -259,45 +247,41 @@ def set_alert(bundle_id, style, kill_nc=True):
 
 
 def main():
-    #------------------------
-    #------------------------
-    #------------------------
-    try:
-        # First arguments are UNIX-style, single-letter arguments
-        # Second list are long options.
-        # Those requiring arguments are followed by an =
-        opts, args = getopt.getopt(
-            sys.argv[1::], "hlvi:r:g:a:s",
-            ["help", "list", "verbose", "remove-system-center", "insert=",
-             "remove=", "getalertstyle=", "alertstyle="])
-    except getopt.GetoptError as err:
-        usage()
-        sys.exit(2)
-    verbose = False
+    '''Define and parse options, call our worker functions'''
+    parser = optparse.OptionParser(usage=usage())
+    parser.add_option('--list', '-l', action='store_true',
+                      help='List BUNDLE_IDs in Notification Center database.')
+    parser.add_option('--verbose', '-v', action='count', default=0,
+                      help='More verbose output from this tool.')
+    parser.add_option('--insert', '-i', metavar='BUNDLE_ID',
+                      help='Add BUNDLE_ID to Notification Center.')
+    parser.add_option('--remove', '-r', metavar='BUNDLE_ID',
+                      help='Remove BUNDLE_ID from Notification Center.')
+    parser.add_option('--remove-system-center', action='store_true',
+                      help='Set notification style to \'none\' for all '
+                      '_SYSTEM_CENTER_ items.')
+    parser.add_option('--getalertstyle', '-g', metavar='BUNDLE_ID',
+                      help='Get current notification style for BUNDLE_ID.')
+    parser.add_option('--alertstyle', '-a',
+                      metavar='BUNDLE_ID ALERT_STYLE', nargs=2,
+                      help='Set notification style for BUNDLE_ID. Supported '
+                      'styles are none, banners, and alerts.')
+    options, arguments = parser.parse_args()
 
-    # Parse arguments for options
-    for o, a in opts:
-        if o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif o in ("-l", "--list"):
-            list_clients()
-        elif o in ("-v", "--verbose"):
-            verbose = True
-            print "Verbose feature to be added at a later date."
-        elif o in ("-i", "--insert"):
-            insert_app(a)
-        elif o in ("-r", "--remove"):
-            remove_app(a)
-        elif o in ("-s", "--remove-system-center"):
-            remove_system_center()
-        elif o in ("-g", "--getalertstyle"):
-            get_alertstyle(a)
-        elif o in ("-a", "--alertstyle"):
-            for arg in args:
-                set_alert(a, arg)
-        else:
-            assert False, "unhandled option"
+    if options.list:
+        list_clients()
+    elif options.insert:
+        insert_app(options.insert)
+    elif options.remove:
+        remove_app(options.remove)
+    elif options.remove_system_center:
+        remove_system_center()
+    elif options.getalertstyle:
+        get_alertstyle(options.getalertstyle)
+    elif options.alertstyle:
+        set_alert(options.alertstyle[0], options.alertstyle[1])
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
