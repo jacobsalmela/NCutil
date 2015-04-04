@@ -105,43 +105,40 @@ def get_available_id(curs):
     return last_id + 1
 
 
-def insert_app(bundle_id):
-    '''Adds bundle_id to Notification Center database'''
-    if not bundleid_exists(bundle_id):
-        conn, curs = connect_to_db()
-        next_id = get_available_id(curs)
-        curs.execute("INSERT INTO app_info VALUES('%s', '%s', '14', '5', '%s')"
-                     % (next_id, bundle_id, next_id))
-        commit_changes(conn)
-        kill_notification_center()
-    else:
-        print >> sys.stderr, "%s is already in Notification Center" % bundle_id
-
-
-def remove_app(bundle_id):
-    '''Removes bundle_id from Notification Center database'''
-    if not bundleid_exists(bundle_id):
-        print >> sys.stderr, "%s not in Notification Center" % bundle_id
-        exit(1)
-
+def insert_app(bundle_ids):
+    '''Adds bundle_ids to Notification Center database'''
     conn, curs = connect_to_db()
-    if (bundle_id == 'com.apple.maspushagent'
-            or bundle_id == 'com.apple.appstore'):
-        print "Yeah, those alerts are annoying."
-    curs.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            next_id = get_available_id(curs)
+            curs.execute("INSERT INTO app_info VALUES('%s', '%s', '14', '5', '%s')"
+                         % (next_id, bundle_id, next_id))
+        else:
+            print >> sys.stderr, "%s is already in Notification Center" % bundle_id
+
     commit_changes(conn)
     kill_notification_center()
 
 
-def set_flags(flags, bundle_id, like=False):
+def remove_app(bundle_ids):
+    '''Removes bundle_ids from Notification Center database'''
+    conn, curs = connect_to_db()
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            curs.execute("DELETE from app_info where bundleid IS '%s'" % (bundle_id))
+
+    commit_changes(conn)
+    kill_notification_center()
+
+
+def set_flags(flags, bundle_id):
     '''Sets Notification Center flags for bundle_id'''
     conn, curs = connect_to_db()
-    if like:
-        curs.execute("UPDATE app_info SET flags='%s' where bundleid like '%s'"
-                     % (flags, bundle_id))
-    else:
-        curs.execute("UPDATE app_info SET flags='%s' where bundleid='%s'"
-                     % (flags, bundle_id))
+    curs.execute("UPDATE app_info SET flags='%s' where bundleid='%s'"
+                  % (flags, bundle_id))
     commit_changes(conn)
 
 
@@ -180,9 +177,8 @@ def get_flags(bundle_id):
 def remove_system_center():
     '''Sets alert style to 'none'' for all bundle_ids starting with
     _SYSTEM_CENTER_:. Not convinced this is a great idea, but there it is...'''
-    for bundle_id in get_matching_ids('_SYSTEM_CENTER_:%'):
-        set_alert(bundle_id, 'none', kill_nc=False)
-    kill_notification_center()
+    set_alert('none', get_matching_ids('_SYSTEM_CENTER_:%'))
+
 
 # flags are bits in a 16 bit(?) data structure
 SHOW_IN_CENTER = 1 << 0
@@ -203,7 +199,7 @@ SHOW_PREVIEWS_WHEN_UNLOCKED = 1 << 14
 UNKNOWN_15 = 1 << 15
 
 
-def get_alertstyle(bundle_id):
+def get_alert_style(bundle_id):
     '''Print the alert style for bundle_id'''
     if not bundleid_exists(bundle_id):
         print >> sys.stderr, "%s not in Notification Center" % bundle_id
@@ -219,31 +215,36 @@ def get_alertstyle(bundle_id):
     print "%s has notification style: %s" % (bundle_id, style)
 
 
-def set_alert(bundle_id, style, kill_nc=True):
+def set_alert(style, bundle_ids):
     '''Set the alert style for bundle_id. If kill_nc is False, skip killing
     the NotificationCenter and usernoted processes'''
-    if not bundleid_exists(bundle_id):
-        print >> sys.stderr, "%s not in Notification Center" % bundle_id
-        exit(1)
 
     # verify this is a supported alert type
     if style not in ['none', 'alerts', 'banners']:
         print >> sys.stderr, "%s is not a valid alert type" % style
         exit(1)
 
-    current_flags = get_flags(bundle_id)
-    # turn off both banner and alert flags
-    new_flags = current_flags & ~(BANNER_STYLE | ALERT_STYLE)
-    if style == 'alerts':
-        # turn on alert flag
-        new_flags = new_flags | ALERT_STYLE
-    elif style == 'banners':
-        # turn on banner flag
-        new_flags = new_flags | BANNER_STYLE
-    if new_flags != current_flags:
-        set_flags(new_flags, bundle_id)
-    if kill_nc:
-        kill_notification_center()
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            # turn off both banner and alert flags
+            new_flags = current_flags & ~(BANNER_STYLE | ALERT_STYLE)
+            if style == 'alerts':
+                # turn on alert flag
+                new_flags = new_flags | ALERT_STYLE
+            elif style == 'banners':
+                # turn on banner flag
+                new_flags = new_flags | BANNER_STYLE
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
 
 
 def main():
@@ -253,33 +254,37 @@ def main():
                       help='List BUNDLE_IDs in Notification Center database.')
     parser.add_option('--verbose', '-v', action='count', default=0,
                       help='More verbose output from this tool.')
-    parser.add_option('--insert', '-i', metavar='BUNDLE_ID',
-                      help='Add BUNDLE_ID to Notification Center.')
-    parser.add_option('--remove', '-r', metavar='BUNDLE_ID',
-                      help='Remove BUNDLE_ID from Notification Center.')
+    parser.add_option('--insert', '-i', metavar='BUNDLE_ID [...]',
+                      help='Add BUNDLE_IDs to Notification Center.')
+    parser.add_option('--remove', '-r', metavar='BUNDLE_ID [...]',
+                      help='Remove BUNDLE_IDs from Notification Center.')
     parser.add_option('--remove-system-center', action='store_true',
                       help='Set notification style to \'none\' for all '
                       '_SYSTEM_CENTER_ items.')
-    parser.add_option('--getalertstyle', '-g', metavar='BUNDLE_ID',
+    parser.add_option('--get-alert-style', '-g', metavar='BUNDLE_ID',
                       help='Get current notification style for BUNDLE_ID.')
-    parser.add_option('--alertstyle', '-a',
-                      metavar='BUNDLE_ID ALERT_STYLE', nargs=2,
-                      help='Set notification style for BUNDLE_ID. Supported '
+    parser.add_option('--alert-style', '-a',
+                      metavar='ALERT_STYLE BUNDLE_ID [...]',
+                      help='Set notification style for BUNDLE_IDS. Supported '
                       'styles are none, banners, and alerts.')
     options, arguments = parser.parse_args()
 
     if options.list:
         list_clients()
     elif options.insert:
-        insert_app(options.insert)
+        bundle_ids = [options.insert]
+        bundle_ids.extend(arguments)
+        insert_app(bundle_ids)
     elif options.remove:
-        remove_app(options.remove)
+        bundle_ids = [options.remove]
+        bundle_ids.extend(arguments)
+        remove_app(bundle_ids)
     elif options.remove_system_center:
         remove_system_center()
-    elif options.getalertstyle:
-        get_alertstyle(options.getalertstyle)
-    elif options.alertstyle:
-        set_alert(options.alertstyle[0], options.alertstyle[1])
+    elif options.get_alert_style:
+        get_alert_style(options.get_alert_style)
+    elif options.alert_style:
+        set_alert(options.alert_style, arguments)
     else:
         parser.print_help()
 
