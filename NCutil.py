@@ -2,7 +2,7 @@
 ##############################
 ######### IMPORTS ############
 import sys
-import optparse
+import argparse
 import os
 import subprocess
 import sqlite3
@@ -249,42 +249,38 @@ def set_alert(style, bundle_ids):
 
 def main():
     '''Define and parse options, call our worker functions'''
-    parser = optparse.OptionParser(usage=usage())
-    parser.add_option('--list', '-l', action='store_true',
-                      help='List BUNDLE_IDs in Notification Center database.')
-    parser.add_option('--verbose', '-v', action='count', default=0,
-                      help='More verbose output from this tool.')
-    parser.add_option('--insert', '-i', metavar='BUNDLE_ID [...]',
-                      help='Add BUNDLE_IDs to Notification Center.')
-    parser.add_option('--remove', '-r', metavar='BUNDLE_ID [...]',
-                      help='Remove BUNDLE_IDs from Notification Center.')
-    parser.add_option('--remove-system-center', action='store_true',
-                      help='Set notification style to \'none\' for all '
-                      '_SYSTEM_CENTER_ items.')
-    parser.add_option('--get-alert-style', '-g', metavar='BUNDLE_ID',
-                      help='Get current notification style for BUNDLE_ID.')
-    parser.add_option('--alert-style', '-a',
-                      metavar='ALERT_STYLE BUNDLE_ID [...]',
-                      help='Set notification style for BUNDLE_IDS. Supported '
-                      'styles are none, banners, and alerts.')
-    options, arguments = parser.parse_args()
+    parser = argparse.ArgumentParser(usage=usage())
+    parser.add_argument('--list', '-l', action='store_true',
+                        help='List BUNDLE_IDs in Notification Center database.')
+    parser.add_argument('--verbose', '-v', action='count', default=0,
+                        help='More verbose output from this tool.')
+    parser.add_argument('--insert', '-i', metavar='BUNDLE_ID [...]', nargs='+',
+                        help='Add BUNDLE_IDs to Notification Center.')
+    parser.add_argument('--remove', '-r', metavar='BUNDLE_ID [...]', nargs='+',
+                        help='Remove BUNDLE_IDs from Notification Center.')
+    parser.add_argument('--remove-system-center', action='store_true',
+                        help='Set notification style to \'none\' for all '
+                        '_SYSTEM_CENTER_ items.')
+    parser.add_argument('--get-alert-style', '-g', metavar='BUNDLE_ID',
+                        help='Get current notification style for BUNDLE_ID.')
+    parser.add_argument('--alert-style', '-a',
+                        metavar='ALERT_STYLE BUNDLE_ID [...]', nargs='+',
+                        help='Set notification style for BUNDLE_IDS. Supported '
+                        'styles are none, banners, and alerts.')
+    options = parser.parse_args()
 
     if options.list:
         list_clients()
     elif options.insert:
-        bundle_ids = [options.insert]
-        bundle_ids.extend(arguments)
-        insert_app(bundle_ids)
+        insert_app(options.insert)
     elif options.remove:
-        bundle_ids = [options.remove]
-        bundle_ids.extend(arguments)
-        remove_app(bundle_ids)
+        remove_app(options.remove)
     elif options.remove_system_center:
         remove_system_center()
     elif options.get_alert_style:
         get_alert_style(options.get_alert_style)
     elif options.alert_style:
-        set_alert(options.alert_style, arguments)
+        set_alert(options.alert_style[0], options.alert_style[1:])
     else:
         parser.print_help()
 
