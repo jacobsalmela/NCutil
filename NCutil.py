@@ -268,8 +268,7 @@ def get_info(bundle_id):
         style = "None"
     app_name = get_app_name(bundle_id)
     print "Notification Center settings for %s:" % app_name
-    print '    %s alert style: %s%s' % (app_name,
-                                        max(0, 21-len(app_name)) * ' ', style)
+    print '    %-34s %s' % (app_name + ' alert style:', style)
     if current_flags & SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN:
         show_notifications_on_lock_screen = False
         print "    Show notifications on lock screen: No"
