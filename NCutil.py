@@ -331,6 +331,125 @@ def set_alert(style, bundle_ids):
     kill_notification_center()
 
 
+def set_show_on_lock_screen(value, bundle_ids):
+    '''Set the boolean value for badging the app icon'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = (
+                    current_flags & ~SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN)
+            else:
+                new_flags = current_flags | SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
+
+
+def set_badge_app_icon(value, bundle_ids):
+    '''Set the boolean value for causing the notifications to be displayed
+    when the screen is locked'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = current_flags | BADGE_ICONS
+            else:
+                new_flags = current_flags & ~BADGE_ICONS
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
+
+
+def set_notification_sound(value, bundle_ids):
+    '''Set the boolean value for notification sound'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = current_flags | SOUNDS
+            else:
+                new_flags = current_flags & ~SOUNDS
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
+
+
+def set_show_in_notification_center(value, bundle_ids):
+    '''Set the "Show in Notification Center" options'''
+
+    # verify this is a supported value
+    allowed_values = ['0', '1', '5', '10', '20']
+    if value not in allowed_values:
+        print >> sys.stderr, (
+            "Value must be one of %s." % ', '.join(allowed_values))
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == '0':
+                new_flags = current_flags | DONT_SHOW_IN_CENTER
+            else:
+                conn, curs = connect_to_db()
+                curs.execute(
+                    "UPDATE app_info SET show_count='%s' where bundleid='%s'"
+                     % (value, bundle_id))
+                commit_changes(conn)
+                new_flags = current_flags & ~DONT_SHOW_IN_CENTER
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+
+    kill_notification_center()
+
+
+
 def main():
     '''Define and parse options, call our worker functions'''
     parser = argparse.ArgumentParser(usage=usage())
@@ -353,8 +472,27 @@ def main():
     parser.add_argument('--alert-style', '-a',
                         metavar=('ALERT_STYLE BUNDLE_ID', 'BUNDLE_ID'),
                         nargs='+',
-                        help='Set notification style for BUNDLE_IDS. Supported '
-                        'styles are none, banners, and alerts.')
+                        help='Set notification style for BUNDLE_ID(s). '
+                        'Supported styles are none, banners, and alerts.')
+    parser.add_argument('--show-on-lock-screen',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set display notifications for BUNDLE_ID(s) when '
+                        'the screen is locked.')
+    parser.add_argument('--badge-app-icon',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set badge app icon value for BUNDLE_ID(s).')
+    parser.add_argument('--sound',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set notification sound value for BUNDLE_ID(s).')
+    parser.add_argument('--show-in-notification-center',
+                        metavar=('0|1|5|10|20 BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set "Show in Notification Center" options for '
+                        'BUNDLE_ID(s).')
+
     options = parser.parse_args()
 
     # make sure at least one option has been chosem
@@ -383,6 +521,15 @@ def main():
         get_info(options.get_info)
     if options.alert_style:
         set_alert(options.alert_style[0], options.alert_style[1:])
-
+    if options.show_on_lock_screen:
+        set_show_on_lock_screen(options.show_on_lock_screen[0],
+                                options.show_on_lock_screen[1:])
+    if options.badge_app_icon:
+        set_badge_app_icon(options.badge_app_icon[0], options.badge_app_icon[1:])
+    if options.sound:
+        set_notification_sound(options.sound[0], options.sound[1:])
+    if options.show_in_notification_center:
+        set_show_in_notification_center(options.show_in_notification_center[0],
+                                        options.show_in_notification_center[1:])
 if __name__ == "__main__":
     main()
