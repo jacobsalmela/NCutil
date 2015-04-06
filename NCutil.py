@@ -10,6 +10,12 @@ import sqlite3
 from platform import mac_ver
 from glob import glob
 
+# even though this is not ideal Python form, we're moving these
+# imports into the functions that need them since these are slow
+# to import
+#from Foundation import NSBundle, NSFileManager
+#from AppKit import NSWorkspace
+
 ##############################
 ######## FUNCTIONS ###########
 def usage():
@@ -174,14 +180,48 @@ def get_flags(bundle_id):
     return int(flags)
 
 
+def get_show_count(bundle_id):
+    '''Returns number of items to show in Notification Center for bundle_id'''
+    conn, curs = connect_to_db()
+    curs.execute("SELECT show_count from app_info where bundleid='%s'" % (bundle_id))
+    try:
+        flags = curs.fetchall()[0][0]
+    except IndexError:
+        flags = 0
+    conn.close()
+    return int(flags)
+
+
 def remove_system_center():
     '''Sets alert style to 'none'' for all bundle_ids starting with
     _SYSTEM_CENTER_:. Not convinced this is a great idea, but there it is...'''
     set_alert('none', get_matching_ids('_SYSTEM_CENTER_:%'))
 
 
+def get_app_name(bundle_id):
+    '''Get display name for app specified by bundle_id'''
+    from AppKit import NSWorkspace
+    from Foundation import NSFileManager
+    app_path = NSWorkspace.sharedWorkspace(
+        ).absolutePathForAppBundleWithIdentifier_(bundle_id)
+    if app_path:
+        return NSFileManager.defaultManager().displayNameAtPath_(app_path)
+    return bundle_id
+
+
+def get_bundle_id(app_name):
+    '''Given an app_name, get the bundle_id'''
+    from AppKit import NSWorkspace
+    from Foundation import NSBundle
+    app_path = NSWorkspace.sharedWorkspace(
+        ).fullPathForApplication_(app_name)
+    if app_path:
+        return NSBundle.bundleWithPath_(app_path).bundleIdentifier()
+    return None
+
+
 # flags are bits in a 16 bit(?) data structure
-SHOW_IN_CENTER = 1 << 0
+DONT_SHOW_IN_CENTER = 1 << 0
 BADGE_ICONS = 1 << 1
 SOUNDS = 1 << 2
 BANNER_STYLE = 1 << 3
@@ -193,9 +233,9 @@ UNKNOWN_8 = 1 << 8
 UNKNOWN_9 = 1 << 9
 UNKNOWN_10 = 1 << 10
 UNKNOWN_11 = 1 << 11
-SHOW_ON_LOCKSCREEN = 1 << 12
+SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN = 1 << 12
 SHOW_PREVIEWS_ALWAYS = 1 << 13
-SHOW_PREVIEWS_WHEN_UNLOCKED = 1 << 14
+SUPPRESS_MESSAGE_PREVIEWS = 1 << 14
 UNKNOWN_15 = 1 << 15
 
 
@@ -207,12 +247,56 @@ def get_alert_style(bundle_id):
 
     current_flags = get_flags(bundle_id)
     if current_flags & ALERT_STYLE:
-        style = "alerts"
+        print "alerts"
     elif current_flags & BANNER_STYLE:
-        style = "banners"
+        print "banners"
     else:
-        style = "none"
-    print "%s has notification style: %s" % (bundle_id, style)
+        print "none"
+    
+def get_info(bundle_id):
+    '''Print the Notification Center settings for bundle_id'''
+    if not bundleid_exists(bundle_id):
+        print >> sys.stderr, "%s not in Notification Center" % bundle_id
+        exit(1)
+
+    current_flags = get_flags(bundle_id)
+    if current_flags & ALERT_STYLE:
+        style = "Alerts"
+    elif current_flags & BANNER_STYLE:
+        style = "Banners"
+    else:
+        style = "None"
+    app_name = get_app_name(bundle_id)
+    print "Notification Center settings for %s:" % app_name
+    print '    %-34s %s' % (app_name + ' alert style:', style)
+    if current_flags & SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN:
+        show_notifications_on_lock_screen = False
+        print "    Show notifications on lock screen: No"
+    else:
+        show_notifications_on_lock_screen = True
+        print "    Show notifications on lock screen: Yes"
+    if current_flags & SUPPRESS_MESSAGE_PREVIEWS:
+        print "    Show message preview:              Off"
+    elif ((current_flags & SHOW_PREVIEWS_ALWAYS)
+            and show_notifications_on_lock_screen):
+        print "    Show message preview:              Always"
+    if current_flags & DONT_SHOW_IN_CENTER:
+        print "    Show in Notification Center:       No"
+    else:
+        show_count = get_show_count(bundle_id)
+        if show_count == 1:
+            items = '1 Recent Item'
+        else:
+            items = '%s Recent Items' % show_count
+        print "    Show in Notification Center:       %s" % items
+    if current_flags & BADGE_ICONS:
+        print "    Badge app icon:                    Yes"
+    else:
+        print "    Badge app icon:                    No"
+    if current_flags & SOUNDS:
+        print "    Play sound for notifications:      Yes"
+    else:
+        print "    Play sound for notifications:      No"
 
 
 def set_alert(style, bundle_ids):
@@ -254,35 +338,51 @@ def main():
                         help='List BUNDLE_IDs in Notification Center database.')
     parser.add_argument('--verbose', '-v', action='count', default=0,
                         help='More verbose output from this tool.')
-    parser.add_argument('--insert', '-i', metavar='BUNDLE_ID [...]', nargs='+',
+    parser.add_argument('--insert', '-i', metavar='BUNDLE_ID', nargs='+',
                         help='Add BUNDLE_IDs to Notification Center.')
-    parser.add_argument('--remove', '-r', metavar='BUNDLE_ID [...]', nargs='+',
+    parser.add_argument('--remove', '-r', metavar='BUNDLE_ID', nargs='+',
                         help='Remove BUNDLE_IDs from Notification Center.')
     parser.add_argument('--remove-system-center', action='store_true',
                         help='Set notification style to \'none\' for all '
                         '_SYSTEM_CENTER_ items.')
     parser.add_argument('--get-alert-style', '-g', metavar='BUNDLE_ID',
                         help='Get current notification style for BUNDLE_ID.')
+    parser.add_argument('--get-info', metavar='BUNDLE_ID',
+                        help='Print current Notification Center settings for '
+                        'BUNDLE_ID.')
     parser.add_argument('--alert-style', '-a',
-                        metavar='ALERT_STYLE BUNDLE_ID [...]', nargs='+',
+                        metavar=('ALERT_STYLE BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
                         help='Set notification style for BUNDLE_IDS. Supported '
                         'styles are none, banners, and alerts.')
     options = parser.parse_args()
 
+    # make sure at least one option has been chosem
+    one_attr_set = False
+    options_dict = vars(options)
+    for key in options_dict.keys():
+        if options_dict[key]:
+            one_attr_set = True
+            break
+    if not one_attr_set:
+        parser.print_help()
+        exit(1)
+
+    # process options
     if options.list:
         list_clients()
-    elif options.insert:
+    if options.insert:
         insert_app(options.insert)
-    elif options.remove:
+    if options.remove:
         remove_app(options.remove)
-    elif options.remove_system_center:
+    if options.remove_system_center:
         remove_system_center()
-    elif options.get_alert_style:
+    if options.get_alert_style:
         get_alert_style(options.get_alert_style)
-    elif options.alert_style:
+    if options.get_info:
+        get_info(options.get_info)
+    if options.alert_style:
         set_alert(options.alert_style[0], options.alert_style[1:])
-    else:
-        parser.print_help()
 
 if __name__ == "__main__":
     main()
