@@ -331,7 +331,7 @@ def set_alert(style, bundle_ids):
     kill_notification_center()
 
 
-def show_on_lock_screen(value, bundle_ids):
+def set_show_on_lock_screen(value, bundle_ids):
     '''Set the boolean value for badging the app icon'''
 
     # verify this is a supported value
@@ -359,7 +359,7 @@ def show_on_lock_screen(value, bundle_ids):
     kill_notification_center()
 
 
-def badge_app_icon(value, bundle_ids):
+def set_badge_app_icon(value, bundle_ids):
     '''Set the boolean value for causing the notifications to be displayed
     when the screen is locked'''
 
@@ -386,6 +386,32 @@ def badge_app_icon(value, bundle_ids):
                 set_flags(new_flags, bundle_id)
     kill_notification_center()
 
+
+def set_notification_sound(value, bundle_ids):
+    '''Set the boolean value for notification sound'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = current_flags | SOUNDS
+            else:
+                new_flags = current_flags & ~SOUNDS
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
 
 
 def main():
@@ -421,6 +447,11 @@ def main():
                         metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
                         nargs='+',
                         help='Set badge app icon value for BUNDLE_ID(s).')
+    parser.add_argument('--sound',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set notification sound value for BUNDLE_ID(s).')
+
 
     options = parser.parse_args()
 
@@ -451,10 +482,12 @@ def main():
     if options.alert_style:
         set_alert(options.alert_style[0], options.alert_style[1:])
     if options.show_on_lock_screen:
-        show_on_lock_screen(options.show_on_lock_screen[0],
-                            options.show_on_lock_screen[1:])
+        set_show_on_lock_screen(options.show_on_lock_screen[0],
+                                options.show_on_lock_screen[1:])
     if options.badge_app_icon:
-        badge_app_icon(options.badge_app_icon[0], options.badge_app_icon[1:])
+        set_badge_app_icon(options.badge_app_icon[0], options.badge_app_icon[1:])
+    if options.sound:
+        set_notification_sound(options.sound[0], options.sound[1:])
 
 if __name__ == "__main__":
     main()
