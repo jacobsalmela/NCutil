@@ -332,8 +332,7 @@ def set_alert(style, bundle_ids):
 
 
 def show_on_lock_screen(value, bundle_ids):
-    '''Set the boolean value for causing the notifications to be displayed
-    when the screen is locked'''
+    '''Set the boolean value for badging the app icon'''
 
     # verify this is a supported value
     if value not in ['true', 'false']:
@@ -358,6 +357,35 @@ def show_on_lock_screen(value, bundle_ids):
             if new_flags != current_flags:
                 set_flags(new_flags, bundle_id)
     kill_notification_center()
+
+
+def badge_app_icon(value, bundle_ids):
+    '''Set the boolean value for causing the notifications to be displayed
+    when the screen is locked'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = current_flags | BADGE_ICONS
+            else:
+                new_flags = current_flags & ~BADGE_ICONS
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
+
 
 
 def main():
@@ -389,7 +417,11 @@ def main():
                         nargs='+',
                         help='Set display notifications for BUNDLE_ID(s) when '
                         'the screen is locked.')
-    
+    parser.add_argument('--badge-app-icon',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set badge app icon value for BUNDLE_ID(s).')
+
     options = parser.parse_args()
 
     # make sure at least one option has been chosem
@@ -421,6 +453,8 @@ def main():
     if options.show_on_lock_screen:
         show_on_lock_screen(options.show_on_lock_screen[0],
                             options.show_on_lock_screen[1:])
+    if options.badge_app_icon:
+        badge_app_icon(options.badge_app_icon[0], options.badge_app_icon[1:])
 
 if __name__ == "__main__":
     main()
