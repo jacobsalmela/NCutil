@@ -331,6 +331,35 @@ def set_alert(style, bundle_ids):
     kill_notification_center()
 
 
+def show_on_lock_screen(value, bundle_ids):
+    '''Set the boolean value for causing the notifications to be displayed
+    when the screen is locked'''
+
+    # verify this is a supported value
+    if value not in ['true', 'false']:
+        print >> sys.stderr, "Value must be 'true' or 'false'."
+        exit(1)
+
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+    for bundle_id in bundle_ids:
+        if not bundleid_exists(bundle_id):
+            print >> sys.stderr, (
+                "WARNING: %s not in Notification Center" % bundle_id)
+        else:
+            current_flags = get_flags(bundle_id)
+            if value == 'true':
+                new_flags = (
+                    current_flags & ~SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN)
+            else:
+                new_flags = current_flags | SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN
+            if new_flags != current_flags:
+                set_flags(new_flags, bundle_id)
+    kill_notification_center()
+
+
 def main():
     '''Define and parse options, call our worker functions'''
     parser = argparse.ArgumentParser(usage=usage())
@@ -353,8 +382,14 @@ def main():
     parser.add_argument('--alert-style', '-a',
                         metavar=('ALERT_STYLE BUNDLE_ID', 'BUNDLE_ID'),
                         nargs='+',
-                        help='Set notification style for BUNDLE_IDS. Supported '
-                        'styles are none, banners, and alerts.')
+                        help='Set notification style for BUNDLE_ID(s). '
+                        'Supported styles are none, banners, and alerts.')
+    parser.add_argument('--show-on-lock-screen',
+                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                        nargs='+',
+                        help='Set display notifications for BUNDLE_ID(s) when '
+                        'the screen is locked.')
+    
     options = parser.parse_args()
 
     # make sure at least one option has been chosem
@@ -383,6 +418,9 @@ def main():
         get_info(options.get_info)
     if options.alert_style:
         set_alert(options.alert_style[0], options.alert_style[1:])
+    if options.show_on_lock_screen:
+        show_on_lock_screen(options.show_on_lock_screen[0],
+                            options.show_on_lock_screen[1:])
 
 if __name__ == "__main__":
     main()
