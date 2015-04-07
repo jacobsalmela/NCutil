@@ -239,12 +239,16 @@ SUPPRESS_MESSAGE_PREVIEWS = 1 << 14
 UNKNOWN_15 = 1 << 15
 
 
-def get_alert_style(bundle_id):
-    '''Print the alert style for bundle_id'''
+def error_and_exit_if_not_bundle_exists(bundle_id):
+    '''Print an error and exit if bundle_id doesn't exist.'''
     if not bundleid_exists(bundle_id):
         print >> sys.stderr, "%s not in Notification Center" % bundle_id
         exit(1)
 
+
+def get_alert_style(bundle_id):
+    '''Print the alert style for bundle_id'''
+    error_and_exit_if_not_bundle_exists(bundle_id)
     current_flags = get_flags(bundle_id)
     if current_flags & ALERT_STYLE:
         print "alerts"
@@ -252,13 +256,56 @@ def get_alert_style(bundle_id):
         print "banners"
     else:
         print "none"
-    
+
+
+def get_show_on_lock_screen(bundle_id):
+    '''Print state of "Show notifications on lock screen"'''
+    error_and_exit_if_not_bundle_exists(bundle_id)
+    current_flags = get_flags(bundle_id)
+    if current_flags & SUPPRESS_NOTIFICATIONS_ON_LOCKSCREEN:
+        print 'false'
+    else:
+        print 'true'
+
+
+def get_badge_app_icon(bundle_id):
+    '''Print state of "Badge app icon"'''
+    error_and_exit_if_not_bundle_exists(bundle_id)
+    current_flags = get_flags(bundle_id)
+    if current_flags & BADGE_ICONS:
+        print 'true'
+    else:
+        print 'false'
+
+
+def get_notification_sound(bundle_id):
+    '''Print state of "Play sound for notifications"'''
+    error_and_exit_if_not_bundle_exists(bundle_id)
+    current_flags = get_flags(bundle_id)
+    if current_flags & SOUNDS:
+        print 'true'
+    else:
+        print 'false'
+
+
+def get_show_in_notification_center(bundle_id):
+    '''Print state of "Show in Notification Center"'''
+    error_and_exit_if_not_bundle_exists(bundle_id)
+    current_flags = get_flags(bundle_id)
+    if current_flags & DONT_SHOW_IN_CENTER:
+        print 'false'
+    else:
+        show_count = get_show_count(bundle_id)
+        if show_count == 1:
+            items = '1 recent item'
+        else:
+            items = '%s recent items' % show_count
+        print items
+
+
 def get_info(bundle_id):
     '''Print the Notification Center settings for bundle_id'''
-    if not bundleid_exists(bundle_id):
-        print >> sys.stderr, "%s not in Notification Center" % bundle_id
-        exit(1)
-
+    error_and_exit_if_not_bundle_exists(bundle_id)
     current_flags = get_flags(bundle_id)
     if current_flags & ALERT_STYLE:
         style = "Alerts"
@@ -299,19 +346,30 @@ def get_info(bundle_id):
         print "    Play sound for notifications:      No"
 
 
+def verify_value_in_allowed(label, value, allowed_values):
+    '''Make sure our value has an allowed value'''
+    if value not in allowed_values:
+        print >> sys.stderr, (
+            "%s must be one of: %s." 
+            % (label, ', '.join(allowed_values)))
+        exit(1)
+
+
+def bundle_ids_or_error_and_exit(bundle_ids):
+    '''Print an error and exit if bundle_ids is empty'''
+    if not bundle_ids:
+        print >> sys.stderr, "Must specify at least one bundle id!"
+        exit(1)
+
+
 def set_alert(style, bundle_ids):
     '''Set the alert style for bundle_id. If kill_nc is False, skip killing
     the NotificationCenter and usernoted processes'''
 
     # verify this is a supported alert type
-    if style not in ['none', 'alerts', 'banners']:
-        print >> sys.stderr, "%s is not a valid alert type" % style
-        exit(1)
-
-    if not bundle_ids:
-        print >> sys.stderr, "Must specify at least one bundle id!"
-        exit(1)
-
+    verify_value_in_allowed('Alert style', style, ['none', 'alerts', 'banners'])
+    # exit if no bundle_ids were provided
+    bundle_ids_or_error_and_exit(bundle_ids)
     for bundle_id in bundle_ids:
         if not bundleid_exists(bundle_id):
             print >> sys.stderr, (
@@ -335,14 +393,10 @@ def set_show_on_lock_screen(value, bundle_ids):
     '''Set the boolean value for badging the app icon'''
 
     # verify this is a supported value
-    if value not in ['true', 'false']:
-        print >> sys.stderr, "Value must be 'true' or 'false'."
-        exit(1)
-
-    if not bundle_ids:
-        print >> sys.stderr, "Must specify at least one bundle id!"
-        exit(1)
-
+    verify_value_in_allowed(
+        'Show on lock screen value', value, ['true', 'false'])
+    # exit if no bundle_ids were provided
+    bundle_ids_or_error_and_exit(bundle_ids)
     for bundle_id in bundle_ids:
         if not bundleid_exists(bundle_id):
             print >> sys.stderr, (
@@ -364,14 +418,10 @@ def set_badge_app_icon(value, bundle_ids):
     when the screen is locked'''
 
     # verify this is a supported value
-    if value not in ['true', 'false']:
-        print >> sys.stderr, "Value must be 'true' or 'false'."
-        exit(1)
-
-    if not bundle_ids:
-        print >> sys.stderr, "Must specify at least one bundle id!"
-        exit(1)
-
+    verify_value_in_allowed(
+        'Badge app icon value', value, ['true', 'false'])
+    # exit if no bundle_ids were provided
+    bundle_ids_or_error_and_exit(bundle_ids)
     for bundle_id in bundle_ids:
         if not bundleid_exists(bundle_id):
             print >> sys.stderr, (
@@ -391,14 +441,10 @@ def set_notification_sound(value, bundle_ids):
     '''Set the boolean value for notification sound'''
 
     # verify this is a supported value
-    if value not in ['true', 'false']:
-        print >> sys.stderr, "Value must be 'true' or 'false'."
-        exit(1)
-
-    if not bundle_ids:
-        print >> sys.stderr, "Must specify at least one bundle id!"
-        exit(1)
-
+    verify_value_in_allowed(
+        'Notification sound value', value, ['true', 'false'])
+    # exit if no bundle_ids were provided
+    bundle_ids_or_error_and_exit(bundle_ids)
     for bundle_id in bundle_ids:
         if not bundleid_exists(bundle_id):
             print >> sys.stderr, (
@@ -418,16 +464,10 @@ def set_show_in_notification_center(value, bundle_ids):
     '''Set the "Show in Notification Center" options'''
 
     # verify this is a supported value
-    allowed_values = ['0', '1', '5', '10', '20']
-    if value not in allowed_values:
-        print >> sys.stderr, (
-            "Value must be one of %s." % ', '.join(allowed_values))
-        exit(1)
-
-    if not bundle_ids:
-        print >> sys.stderr, "Must specify at least one bundle id!"
-        exit(1)
-
+    verify_value_in_allowed(
+        'Show in notification center value', value, ['0', '1', '5', '10', '20'])
+    # exit if no bundle_ids were provided
+    bundle_ids_or_error_and_exit(bundle_ids)
     for bundle_id in bundle_ids:
         if not bundleid_exists(bundle_id):
             print >> sys.stderr, (
@@ -449,49 +489,70 @@ def set_show_in_notification_center(value, bundle_ids):
     kill_notification_center()
 
 
-
 def main():
     '''Define and parse options, call our worker functions'''
     parser = argparse.ArgumentParser(usage=usage())
-    parser.add_argument('--list', '-l', action='store_true',
-                        help='List BUNDLE_IDs in Notification Center database.')
     parser.add_argument('--verbose', '-v', action='count', default=0,
                         help='More verbose output from this tool.')
-    parser.add_argument('--insert', '-i', metavar='BUNDLE_ID', nargs='+',
-                        help='Add BUNDLE_IDs to Notification Center.')
-    parser.add_argument('--remove', '-r', metavar='BUNDLE_ID', nargs='+',
-                        help='Remove BUNDLE_IDs from Notification Center.')
-    parser.add_argument('--remove-system-center', action='store_true',
-                        help='Set notification style to \'none\' for all '
-                        '_SYSTEM_CENTER_ items.')
-    parser.add_argument('--get-alert-style', '-g', metavar='BUNDLE_ID',
-                        help='Get current notification style for BUNDLE_ID.')
-    parser.add_argument('--get-info', metavar='BUNDLE_ID',
-                        help='Print current Notification Center settings for '
-                        'BUNDLE_ID.')
-    parser.add_argument('--alert-style', '-a',
-                        metavar=('ALERT_STYLE BUNDLE_ID', 'BUNDLE_ID'),
-                        nargs='+',
-                        help='Set notification style for BUNDLE_ID(s). '
-                        'Supported styles are none, banners, and alerts.')
-    parser.add_argument('--show-on-lock-screen',
-                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
-                        nargs='+',
-                        help='Set display notifications for BUNDLE_ID(s) when '
-                        'the screen is locked.')
-    parser.add_argument('--badge-app-icon',
-                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
-                        nargs='+',
-                        help='Set badge app icon value for BUNDLE_ID(s).')
-    parser.add_argument('--sound',
-                        metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
-                        nargs='+',
-                        help='Set notification sound value for BUNDLE_ID(s).')
-    parser.add_argument('--show-in-notification-center',
-                        metavar=('0|1|5|10|20 BUNDLE_ID', 'BUNDLE_ID'),
-                        nargs='+',
-                        help='Set "Show in Notification Center" options for '
-                        'BUNDLE_ID(s).')
+    parser.add_argument('--list', '-l', action='store_true',
+                        help='List BUNDLE_IDs in Notification Center database.')
+
+    add_group = parser.add_argument_group(
+        'Options for adding or removing apps from Notification Center')
+    add_group.add_argument('--insert', '-i', metavar='BUNDLE_ID', nargs='+',
+                           help='Add BUNDLE_IDs to Notification Center.')
+    add_group.add_argument('--remove', '-r', metavar='BUNDLE_ID', nargs='+',
+                           help='Remove BUNDLE_IDs from Notification Center.')
+    add_group.add_argument('--remove-system-center', action='store_true',
+                           help='Set notification style to \'none\' for all '
+                           '_SYSTEM_CENTER_ items.')
+
+    info_group = parser.add_argument_group('Options for getting information')
+    info_group.add_argument('--get-alert-style', '-g', metavar='BUNDLE_ID',
+                            help=
+                            'Get current notification style for BUNDLE_ID.')
+    info_group.add_argument('--get-show-on-lock-screen',
+                            metavar='BUNDLE_ID',
+                            help='Print state of \'Show notifications on lock '
+                            'screen\'.')
+    info_group.add_argument('--get-badge-app-icon', metavar='BUNDLE_ID',
+                            help='Print state of \'Badge app icon\'.')
+    info_group.add_argument('--get-sound', metavar='BUNDLE_ID',
+                            help=
+                            'Print state of \'Play sound for notifications\'.')
+    info_group.add_argument('--get-show-in-notification-center',
+                            metavar='BUNDLE_ID',
+                            help=
+                            'Print state of \'Show in Notification Center\'.')
+    info_group.add_argument('--get-info', metavar='BUNDLE_ID',
+                            help='Print current Notification Center settings '
+                            'for BUNDLE_ID.')
+
+    edit_group = parser.add_argument_group('Options for changing settings')
+    edit_group.add_argument('--alert-style', '-a',
+                            metavar=('ALERT_STYLE BUNDLE_ID', 'BUNDLE_ID'),
+                            nargs='+',
+                            help='Set notification style for BUNDLE_ID(s). '
+                            'Supported styles are none, banners, and alerts.')
+    edit_group.add_argument('--show-on-lock-screen',
+                            metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                            nargs='+',
+                            help='Set display notifications for BUNDLE_ID(s) '
+                            'when the screen is locked.')
+    edit_group.add_argument('--badge-app-icon',
+                            metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                            nargs='+',
+                            help='Set badge app icon value for BUNDLE_ID(s).')
+    edit_group.add_argument('--sound',
+                            metavar=('true|false BUNDLE_ID', 'BUNDLE_ID'),
+                            nargs='+',
+                            help=
+                            'Set notification sound value for BUNDLE_ID(s).')
+    edit_group.add_argument('--show-in-notification-center',
+                            metavar=('0|1|5|10|20 BUNDLE_ID', 'BUNDLE_ID'),
+                            nargs='+',
+                            help='Set "Show in Notification Center" options '
+                            'for BUNDLE_ID(s).')
 
     options = parser.parse_args()
 
@@ -519,13 +580,22 @@ def main():
         get_alert_style(options.get_alert_style)
     if options.get_info:
         get_info(options.get_info)
+    if options.get_show_on_lock_screen:
+        get_show_on_lock_screen(options.get_show_on_lock_screen)
+    if options.get_badge_app_icon:
+        get_badge_app_icon(options.get_badge_app_icon)
+    if options.get_sound:
+        get_notification_sound(options.get_sound)
+    if options.get_show_in_notification_center:
+        get_show_in_notification_center(options.get_show_in_notification_center)
     if options.alert_style:
         set_alert(options.alert_style[0], options.alert_style[1:])
     if options.show_on_lock_screen:
-        set_show_on_lock_screen(options.show_on_lock_screen[0],
-                                options.show_on_lock_screen[1:])
+        set_show_on_lock_screen(
+            options.show_on_lock_screen[0], options.show_on_lock_screen[1:])
     if options.badge_app_icon:
-        set_badge_app_icon(options.badge_app_icon[0], options.badge_app_icon[1:])
+        set_badge_app_icon(
+            options.badge_app_icon[0], options.badge_app_icon[1:])
     if options.sound:
         set_notification_sound(options.sound[0], options.sound[1:])
     if options.show_in_notification_center:
