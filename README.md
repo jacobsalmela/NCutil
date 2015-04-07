@@ -47,7 +47,8 @@ You can find out what the app's current alert setting is with the `-g` flag or `
 
 which will return a one line response:
 
-```banners```
+`banners`
+
 
 # Change Settings
 
