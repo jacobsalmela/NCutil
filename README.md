@@ -109,7 +109,19 @@ Disabling the App Store Notifications may also help:
 
 - ```NCutil.py --alerts com.apple.maspushagent none``` 
 
+# Known Issues
+
+If Do Not Disturb is on and you run a command that modifies a setting, Do Not Disturb will be turned off unintentionally.  This seems to only happen in Mavericks and is likely caused by the `killall NotificiationCenter`, which allows the commands to show up in real time.
+
 # Changelog
+
+**2.3**
+
+- added `--get-show-on-lock-screen`
+- added `--get-badge-app-icon` 
+- added `--get-sound`
+- added `--get-show-in-notification-center`
+- reformatted help menu into groups of similar settings
 
 **2.2**
 
