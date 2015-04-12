@@ -2,12 +2,13 @@ NCutil
 ======
 
 Notification Center command line utility - ***Add and remove apps, set alert styles.***
-OS Mavericks and [Yosemite](https://github.com/jasonpjohnson/NCutil/commit/3028e8baccc646b60712fa0cc08de2be52b4e11b).  View changes via the GUI in real-time.
+OS Mavericks and [Yosemite](https://github.com/jasonpjohnson/NCutil/commit/3028e8baccc646b60712fa0cc08de2be52b4e11b).  View changes via the GUI in **real-time**.
 
 # Short Demo Video
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=4Mo6FYXGQOo
-" target="_blank"><img src="http://img.youtube.com/vi/4Mo6FYXGQOo/0.jpg" 
-alt="Modify Notification Center from the command line in OS X" width="240" height="180" border="10" /></a>
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=4mPsqD30eCY
+" target="_blank"><img src="http://img.youtube.com/vi/4mPsqD30eCY/0.jpg" 
+alt="Modify Notification Center from the command line in OS X" width="600" height="400" border="0" /></a>
+ 
 
 # Add and remove apps from Notification Center
 Adding and removing apps is perfect for deploying software silently or having it pre-configured so the user doesn't have to do anything.
@@ -39,16 +40,36 @@ Notification Center settings for Reminders.app:
     Play sound for notifications:      Yes
 ```
 
-## Get Just The Current Alert Setting
+## Get Individual Settings
+
+### Get The Current Alert Settings
+
 You can find out what the app's current alert setting is with the `-g` flag or `--get-alert-style`.
 
 - ```NCutil.py -g com.teamviewer.TeamViewer```
 - ```NCutil.py --get-alert-style com.teamviewer.TeamViewer```
 
-which will return a one line response:
+which will return a one line response: `none`, `banners`, or `alerts`
 
-`banners`
+### Get Other Settings
 
+You can check if individual settings are on or off using some of the examples shown below, which will return a one line response.
+
+`NCutil.py --get-show-on-lock-screen com.apple.iCal`
+
+returns `true` or `false`
+
+`NCutil.py --get-badge-app-icon com.apple.iCal`
+
+returns `true` or `false`
+
+`NCutil.py --get-sound com.apple.iCal`
+
+returns `true` or `false`
+
+`NCutil.py --get-show-in-notification-center com.apple.iCal`
+
+returns a number: `0`, `5`, `10`, or `20`
 
 # Change Settings
 
@@ -59,6 +80,7 @@ which will return a one line response:
 - ```NCutil.py --alert-style com.apple.appstore none```
 
 ## Adjust Other Checkbox Settings
+
 You can adjust any of the checkboxes in the GUI such as the badge icon, number of recent items, whether or not to show it on the lock screen, etc.
 ![Notifications that can be adjusted with NCutil.py](http://i.imgur.com/q0aRdGl.png)
 
@@ -80,7 +102,7 @@ Set the amount of recent Notifications to show to 20 for Dropbox
 
 # Multiple Bundle IDs
 
-For `--insert`, `--remove`, and `--alert-style`, you can add multiple bundle IDs to modify the same setting for multiple apps.
+Most of the options like `--insert`, `--remove`, or `--alert-style`, allow you to add multiple bundle IDs to modify the same setting for multiple apps.
 
 - ```NCutil.py --remove com.noodlesoft.HazelHelper com.apple.Safari com.apple.reminders```
 
@@ -100,7 +122,9 @@ Additionally, if there were some sources you still wanted to have notification f
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.battery-monitor banners```
 
 ### Suppress Apple Update Notifications Like The "Free Yosemite Upgrade" 
-From what I can tell, these are the items you need to disable to stop the Yosemite upgrade Notification.  
+From what I can tell, these are the items you need to disable to [stop the Yosemite upgrade Notification](http://jacobsalmela.com/hide-free-yosemite-upgrade-notification-with-ncutil-py/).  
+
+![Hide the Free Yosemite Upgrade notification](http://i.imgur.com/Vw4VlJM.png)
 
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent none```
 - ```NCutil.py -a _SYSTEM_CENTER_:com.apple.noticeboard none```
@@ -111,7 +135,9 @@ Disabling the App Store Notifications may also help:
 
 # Known Issues
 
-If Do Not Disturb is on and you run a command that modifies a setting, Do Not Disturb will be turned off unintentionally.  This seems to only happen in Mavericks and is likely caused by the `killall NotificiationCenter`, which allows the commands to show up in real time.
+If Do Not Disturb is **on** and you run a command that modifies a setting, Do Not Disturb will be **turned off** unintentionally.  This seems to **only happen in Mavericks** and is likely caused by the `killall NotificiationCenter`, which is what allows the commands to show up in real time.
+
+![Do Not Disturb bug](http://i.imgur.com/SgeeTcA.png)
 
 # Changelog
 
