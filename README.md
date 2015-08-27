@@ -75,9 +75,9 @@ returns a number: `0`, `5`, `10`, or `20`
 
 ## Adjust Alert Duration (Alerts, Banners, or None)
 
-- ```NCutil.py -a com.apple.Safari alerts```
-- ```NCutil.py -a com.apple.reminders banners```
-- ```NCutil.py --alert-style com.apple.appstore none```
+- ```NCutil.py -a alerts com.apple.Safari```
+- ```NCutil.py -a banners com.apple.reminders```
+- ```NCutil.py --alert-style none com.apple.appstore```
 
 ## Adjust Other Checkbox Settings
 
