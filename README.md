@@ -75,9 +75,9 @@ returns a number: `0`, `5`, `10`, or `20`
 
 ## Adjust Alert Duration (Alerts, Banners, or None)
 
-- ```NCutil.py -a com.apple.Safari alerts```
-- ```NCutil.py -a com.apple.reminders banners```
-- ```NCutil.py --alert-style com.apple.appstore none```
+- ```NCutil.py -a alerts com.apple.Safari```
+- ```NCutil.py -a banners com.apple.reminders```
+- ```NCutil.py --alert-style none com.apple.appstore```
 
 ## Adjust Other Checkbox Settings
 
@@ -118,20 +118,20 @@ To add a little more detail to the command above, the `_SYSTEM_CENTER_` entries 
 
 Additionally, if there were some sources you still wanted to have notification for, you can simply re-enable them on an individual basis.
 
-- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent banners```
-- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.battery-monitor banners```
+- ```NCutil.py -a banners _SYSTEM_CENTER_:com.apple.storeagent```
+- ```NCutil.py -a banners _SYSTEM_CENTER_:com.apple.battery-monitor```
 
 ### Suppress Apple Update Notifications Like The "Free Yosemite Upgrade" 
 From what I can tell, these are the items you need to disable to [stop the Yosemite upgrade Notification](http://jacobsalmela.com/hide-free-yosemite-upgrade-notification-with-ncutil-py/).  
 
 ![Hide the Free Yosemite Upgrade notification](http://i.imgur.com/Vw4VlJM.png)
 
-- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.storeagent none```
-- ```NCutil.py -a _SYSTEM_CENTER_:com.apple.noticeboard none```
+- ```NCutil.py -a none _SYSTEM_CENTER_:com.apple.storeagent```
+- ```NCutil.py -a none _SYSTEM_CENTER_:com.apple.noticeboard```
 
 Disabling the App Store Notifications may also help:
 
-- ```NCutil.py --alerts com.apple.maspushagent none``` 
+- ```NCutil.py --alerts none com.apple.maspushagent``` 
 
 # Known Issues
 
