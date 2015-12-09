@@ -1,4 +1,8 @@
 #!/usr/bin/python
+# NCutil is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
 ##############################
 ######### IMPORTS ############
 import sys
@@ -20,13 +24,9 @@ from glob import glob
 ######## FUNCTIONS ###########
 def usage():
     return """
-  _  _  ___     _   _ _ 
- | \| |/ __|  _| |_(_) |
- | .` | (_| || |  _| | |
- |_|\_|\___\_,_|\__|_|_|
-
-Copyright 2014. Jacob Salmela.  http://jacobsalmela.com
-Modified + OSX 10.10 Yosemite Support,  Jason Johnson (2015)"""
+(c) 2015 by Jacob Salmela.  http://jacobsalmela.com
+Modify OS X's Notification Center from the command line
+"""
 
 
 def get_osx_major():
@@ -50,7 +50,7 @@ def get_nc_db():
             nc_db = nc_dbs[-1]
     # Support for osx 10.10 added via randomly generated id for
     # Notification Center Database
-    elif osx_major == '10.10':
+    elif osx_major == '10.10' or osx_major == '10.11':
         darwin_user_dir = subprocess.check_output(
             ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
         nc_db = os.path.join(
@@ -350,7 +350,7 @@ def verify_value_in_allowed(label, value, allowed_values):
     '''Make sure our value has an allowed value'''
     if value not in allowed_values:
         print >> sys.stderr, (
-            "%s must be one of: %s." 
+            "%s must be one of: %s."
             % (label, ', '.join(allowed_values)))
         exit(1)
 
