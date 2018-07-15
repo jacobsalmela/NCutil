@@ -40,7 +40,7 @@ def get_nc_db():
     '''Returns a path to the current (hopefully?) NotificationCenter db'''
     nc_db = None
     osx_major = get_osx_major()
-    if osx_major == '10.8' or osx_major == '10.9':
+    if osx_major in ['10.8', '10.9']:
         nc_nb_path = os.path.expanduser(
             '~/Library/Application Support/NotificationCenter/')
         nc_dbs = glob(nc_nb_path + '*.db')
@@ -50,11 +50,13 @@ def get_nc_db():
             nc_db = nc_dbs[-1]
     # Support for osx 10.10 added via randomly generated id for
     # Notification Center Database
-    elif osx_major == '10.10' or osx_major == '10.11' or osx_major == '10.12':
+    elif osx_major in ['10.10', '10.11', '10.12', '10.13']:
         darwin_user_dir = subprocess.check_output(
             ['/usr/bin/getconf', 'DARWIN_USER_DIR']).rstrip()
         nc_db = os.path.join(
             darwin_user_dir, 'com.apple.notificationcenter/db/db')
+    else:
+        raise Exception('Unsupported macOS version; unable to locate Notification Center database')
     return nc_db
 
 
